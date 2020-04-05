@@ -109,18 +109,27 @@ def generate_ngrams(size, vocabulary, file_name, smoothing):
         elif language == "pt":
             total_count_pt = get_count(size, vocabulary, message, count_pt, total_count_pt)
 
-    # probability_eu = get_probability(count_eu, total_count_eu, smoothing, bins_size)
-    # probability_ca = get_probability(count_ca, total_count_ca, smoothing, bins_size)
-    # probability_gl = get_probability(count_gl, total_count_gl, smoothing, bins_size)
-    # probability_es = get_probability(count_es, total_count_es, smoothing, bins_size)
-    # probability_en = get_probability(count_en, total_count_en, smoothing, bins_size)
-    # probability_pt = get_probability(count_pt, total_count_pt, smoothing, bins_size)
+    probability_eu = get_probability(count_eu, total_count_eu, smoothing, bins_size)
+    probability_ca = get_probability(count_ca, total_count_ca, smoothing, bins_size)
+    probability_gl = get_probability(count_gl, total_count_gl, smoothing, bins_size)
+    probability_es = get_probability(count_es, total_count_es, smoothing, bins_size)
+    probability_en = get_probability(count_en, total_count_en, smoothing, bins_size)
+    probability_pt = get_probability(count_pt, total_count_pt, smoothing, bins_size)
 
     f.close()
 
-    # return {"eu": probability_eu, "ca": probability_ca, "gl": probability_gl, "es": probability_es,
-    #         "en": probability_en, "pt": probability_pt}
+    return {"eu": probability_eu, "ca": probability_ca, "gl": probability_gl, "es": probability_es,
+            "en": probability_en, "pt": probability_pt}
 
+
+def get_probability(count, total_count, smoothing, bins_size):
+    probability = dict()
+    for key in count:
+        probability[key] = (count[key] + smoothing) / (total_count + smoothing * bins_size)
+
+    probability["<NOT-APPEAR>"] = (0 + smoothing) / (total_count + smoothing * bins_size)
+
+    return probability
 
 # ------------------ Start code here ------------------
 
