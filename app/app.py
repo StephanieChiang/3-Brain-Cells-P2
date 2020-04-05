@@ -1,8 +1,10 @@
 import re
+import math
 
 
 def start(vocabulary, size, smoothing, training_file, testing_file):
     probability = generate_ngrams(size, vocabulary, training_file, smoothing)
+    generate_ngram_output(vocabulary, size, smoothing, probability, testing_file)
 
 
 def get_count(size, vocabulary, message, count, total_count):
@@ -130,6 +132,118 @@ def get_probability(count, total_count, smoothing, bins_size):
     probability["<NOT-APPEAR>"] = (0 + smoothing) / (total_count + smoothing * bins_size)
 
     return probability
+
+
+def generate_ngram_output(vocabulary, size, smoothing, probability, testing_file):
+    input_file = open(testing_file, "r", encoding='utf-8')
+
+    trace_file_name = "trace_" + str(vocabulary) + "_" + str(size) + "_" + str(smoothing) + ".txt"
+    eval_file_name = "eval_" + str(vocabulary) + "_" + str(size) + "_" + str(smoothing) + ".txt"
+
+    output_file = open(trace_file_name, "w", encoding='utf-8')
+    output_file2 = open(eval_file_name, "w", encoding='utf-8')
+
+    count = dict()
+    results = []
+
+    for x in input_file:
+        info = x.split()
+        id = info[0]
+        name = info[1]
+        language = info[2]
+        message = " ".join(info[3:])
+
+        if size == 2:
+            message = [message[i:i + 2] for i in range(len(message) - 1)]
+        elif size == 3:
+            message = [message[i:i + 3] for i in range(len(message) - 2)]
+
+        score_eu = get_score(vocabulary, size, "eu", message, probability["eu"])
+
+        score_ca = get_score(vocabulary, size, "ca", message, probability["ca"])
+
+        score_gl = get_score(vocabulary, size, "gl", message, probability["gl"])
+
+        score_es = get_score(vocabulary, size, "es", message, probability["es"])
+
+        score_en = get_score(vocabulary, size, "en", message, probability["en"])
+
+        score_pt = get_score(vocabulary, size, "pt", message, probability["pt"])
+
+        scores = [score_eu, score_ca, score_gl, score_es, score_en, score_pt]
+
+        max_score = max(scores, key=lambda y: y[0])
+
+        label = "correct" if max_score[1] == language else "wrong"
+
+        results.append((max_score[1], language, label))
+
+        output_file.write(id + "  " + max_score[1] + "  " + str(max_score[0]) + "  " + language + "  " + label + "\n")
+
+    # metrics = generate_evaluation(results, count)
+    # output_file2.write(str(metrics[0]) + "\n" +
+    #                    str(metrics[1]) + "  " + str(metrics[2]) + "  " + str(metrics[3]) + "  " + str(
+    #     metrics[4]) + "  " + str(metrics[5]) + "  " + str(metrics[6]) + "\n" +
+    #                    str(metrics[7]) + "  " + str(metrics[8]) + "  " + str(metrics[9]) + "  " + str(
+    #     metrics[10]) + "  " + str(metrics[11]) + "  " + str(metrics[12]) + "\n" +
+    #                    str(metrics[13]) + "  " + str(metrics[14]) + "  " + str(metrics[15]) + "  " + str(
+    #     metrics[16]) + "  " + str(metrics[17]) + "  " + str(metrics[18]) + "\n" +
+    #                    str(metrics[19]) + "  " + str(metrics[20]))
+
+    input_file.close()
+    output_file.close()
+    output_file2.close()
+
+
+def get_score(vocabulary, size, language, message, probability_table):
+    score = 0
+
+    if size == 1:
+        if vocabulary == 0:
+            for letter in message:
+                lower_letter = letter.lower()
+                if re.match("[a-z]", lower_letter):
+                    score = score + math.log(probability_table.get(lower_letter, probability_table["<NOT-APPEAR>"]), 10)
+        elif vocabulary == 1:
+            for letter in message:
+                if re.match("[a-zA-Z]", letter):
+                    score = score + math.log(probability_table.get(letter, probability_table["<NOT-APPEAR>"]), 10)
+        elif vocabulary == 2:
+            for letter in message:
+                if letter.isalpha():
+                    score = score + math.log(probability_table.get(letter, probability_table["<NOT-APPEAR>"]), 10)
+    elif size == 2:
+        if vocabulary == 0:
+            for bigram in message:
+                lower_bigram = bigram.lower()
+                if re.match("([a-z][a-z])", lower_bigram):
+                    score = score + math.log(probability_table.get(lower_bigram, probability_table["<NOT-APPEAR>"]), 10)
+        elif vocabulary == 1:
+            for bigram in message:
+                if re.match("([a-zA-Z][a-zA-Z])", bigram):
+                    score = score + math.log(probability_table.get(bigram, probability_table["<NOT-APPEAR>"]), 10)
+        elif vocabulary == 2:
+            for bigram in message:
+                if bigram.isalpha():
+                    score = score + math.log(probability_table.get(bigram, probability_table["<NOT-APPEAR>"]), 10)
+    elif size == 3:
+        if vocabulary == 0:
+            for trigram in message:
+                lower_trigram = trigram.lower()
+                if re.match("([a-z][a-z][a-z])", lower_trigram):
+                    score = score + math.log(probability_table.get(lower_trigram, probability_table["<NOT-APPEAR>"]),
+                                             10)
+        elif vocabulary == 1:
+            for trigram in message:
+                if re.match("([a-zA-Z][a-zA-Z][a-zA-Z])", trigram):
+                    score = score + math.log(probability_table.get(trigram, probability_table["<NOT-APPEAR>"]), 10)
+        elif vocabulary == 2:
+            for trigram in message:
+                if trigram.isalpha():
+                    score = score + math.log(probability_table.get(trigram, probability_table["<NOT-APPEAR>"]), 10)
+
+    return score, language
+
 
 # ------------------ Start code here ------------------
 
