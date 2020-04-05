@@ -152,7 +152,6 @@ def generate_ngrams(size, vocabulary, file_name, smoothing, model_used):
         count_combine.update(count_en)
         count_combine.update(count_pt)
         bins_size = len(count_combine)
-        print(bins_size)
     else:
         if vocabulary == 0:
             bins_size = 26 ** size
