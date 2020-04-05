@@ -180,15 +180,15 @@ def generate_ngram_output(vocabulary, size, smoothing, probability, testing_file
 
         output_file.write(id + "  " + max_score[1] + "  " + str(max_score[0]) + "  " + language + "  " + label + "\n")
 
-    # metrics = generate_evaluation(results, count)
-    # output_file2.write(str(metrics[0]) + "\n" +
-    #                    str(metrics[1]) + "  " + str(metrics[2]) + "  " + str(metrics[3]) + "  " + str(
-    #     metrics[4]) + "  " + str(metrics[5]) + "  " + str(metrics[6]) + "\n" +
-    #                    str(metrics[7]) + "  " + str(metrics[8]) + "  " + str(metrics[9]) + "  " + str(
-    #     metrics[10]) + "  " + str(metrics[11]) + "  " + str(metrics[12]) + "\n" +
-    #                    str(metrics[13]) + "  " + str(metrics[14]) + "  " + str(metrics[15]) + "  " + str(
-    #     metrics[16]) + "  " + str(metrics[17]) + "  " + str(metrics[18]) + "\n" +
-    #                    str(metrics[19]) + "  " + str(metrics[20]))
+    metrics = generate_evaluation(results, count)
+    output_file2.write(str(metrics[0]) + "\n" +
+                       str(metrics[1]) + "  " + str(metrics[2]) + "  " + str(metrics[3]) + "  " + str(
+        metrics[4]) + "  " + str(metrics[5]) + "  " + str(metrics[6]) + "\n" +
+                       str(metrics[7]) + "  " + str(metrics[8]) + "  " + str(metrics[9]) + "  " + str(
+        metrics[10]) + "  " + str(metrics[11]) + "  " + str(metrics[12]) + "\n" +
+                       str(metrics[13]) + "  " + str(metrics[14]) + "  " + str(metrics[15]) + "  " + str(
+        metrics[16]) + "  " + str(metrics[17]) + "  " + str(metrics[18]) + "\n" +
+                       str(metrics[19]) + "  " + str(metrics[20]))
 
     input_file.close()
     output_file.close()
@@ -243,6 +243,155 @@ def get_score(vocabulary, size, language, message, probability_table):
                     score = score + math.log(probability_table.get(trigram, probability_table["<NOT-APPEAR>"]), 10)
 
     return score, language
+
+def generate_accuracy(correct_label, wrong_label):
+    accuracy = correct_label / (correct_label + wrong_label)
+    return accuracy
+
+
+def generate_evaluation(results, count):
+    correct_label = 0
+    wrong_label = 0
+    total_correct_eu = 0
+    total_correct_ca = 0
+    total_correct_gl = 0
+    total_correct_es = 0
+    total_correct_en = 0
+    total_correct_pt = 0
+
+    for result in results:
+        predicted_language = result[0]
+        correct_language = result[1]
+        label = result[2]
+
+        if label == "correct":
+            correct_label = correct_label + 1
+        elif label == "wrong":
+            wrong_label = wrong_label + 1
+
+        # loops over to count correct, wrong outputs
+        count[predicted_language + "-" + correct_language] = count.get(
+            predicted_language + "-" + correct_language, 0) + 1
+
+    accuracy = generate_accuracy(correct_label, wrong_label)
+
+    if count.get("eu-eu", 0) > 0:
+        # number of correct AND predicted eu / sum of predicted eu
+        eu_per_class_precision = count.get("eu-eu", 0) / (
+                count.get("eu-ca", 0) + count.get("eu-gl", 0) + count.get("eu-es", 0) + count.get("eu-en", 0)
+                + count.get("eu-pt", 0) + count.get("eu-eu", 0))
+
+        # number of correct eu
+        total_correct_eu = (
+                count.get("ca-eu", 0) + count.get("gl-eu", 0) + count.get("es-eu", 0) + count.get("en-eu", 0)
+                + count.get("pt-eu", 0) + count.get("eu-eu", 0))
+        # number of correct AND predicted eu / sum of correct eu
+        eu_per_class_recall = count.get("eu-eu", 0) / total_correct_eu
+
+        # f1 = (2*precision*recall/(precision+recall))
+        eu_f1 = (2 * eu_per_class_precision * eu_per_class_recall) / (eu_per_class_precision + eu_per_class_recall)
+    else:
+        eu_per_class_precision = 0
+        eu_per_class_recall = 0
+        eu_f1 = 0
+
+    # calculation for ca
+    if count.get("ca-ca", 0) > 0:
+        ca_per_class_precision = count.get("ca-ca", 0) / (
+                count.get("ca-eu", 0) + count.get("ca-gl", 0) + count.get("ca-es", 0) + count.get("ca-en", 0)
+                + count.get("ca-pt", 0) + count.get("ca-ca", 0))
+
+        total_correct_ca = (
+                count.get("eu-ca", 0) + count.get("gl-ca", 0) + count.get("es-ca", 0) + count.get("en-ca", 0)
+                + count.get("pt-ca", 0) + count.get("ca-ca", 0))
+
+        ca_per_class_recall = count.get("ca-ca", 0) / total_correct_ca
+
+        ca_f1 = (2 * ca_per_class_precision * ca_per_class_recall) / (ca_per_class_precision + ca_per_class_recall)
+    else:
+        ca_per_class_precision = 0
+        ca_per_class_recall = 0
+        ca_f1 = 0
+
+    # calculation for gl
+    if count.get("gl-gl", 0) > 0:
+        gl_per_class_precision = count.get("gl-gl", 0) / (
+                count.get("gl-eu", 0) + count.get("gl-ca", 0) + count.get("gl-es", 0) + count.get("gl-en", 0)
+                + count.get("gl-pt", 0) + count.get("gl-gl", 0))
+
+        total_correct_gl = (
+                count.get("eu-gl", 0) + count.get("ca-gl", 0) + count.get("es-gl", 0) + count.get("en-gl", 0)
+                + count.get("pt-gl", 0) + count.get("gl-gl", 0))
+        gl_per_class_recall = count.get("gl-gl", 0) / total_correct_gl
+
+        gl_f1 = (2 * gl_per_class_precision * gl_per_class_recall) / (gl_per_class_precision + gl_per_class_recall)
+    else:
+        gl_per_class_precision = 0
+        gl_per_class_recall = 0
+        gl_f1 = 0
+
+    # calculation for es
+    if count.get("es-es", 0) > 0:
+        es_per_class_precision = count.get("es-es", 0) / (
+                count.get("es-eu", 0) + count.get("es-ca", 0) + count.get("es-gl", 0) + count.get("es-en", 0)
+                + count.get("es-pt", 0) + count.get("es-es", 0))
+
+        total_correct_es = (
+                count.get("eu-es", 0) + count.get("ca-es", 0) + count.get("gl-es", 0) + count.get("en-es", 0)
+                + count.get("pt-es", 0) + count.get("es-es", 0))
+        es_per_class_recall = count.get("es-es", 0) / total_correct_es
+
+        es_f1 = (2 * es_per_class_precision * es_per_class_recall) / (es_per_class_precision + es_per_class_recall)
+    else:
+        es_per_class_precision = 0
+        es_per_class_recall = 0
+        es_f1 = 0
+
+    if count.get("en-en", 0) > 0:
+        en_per_class_precision = count.get("en-en", 0) / (
+                count.get("en-eu", 0) + count.get("en-ca", 0) + count.get("en-gl", 0) + count.get("en-es", 0)
+                + count.get("en-pt", 0) + count.get("en-en", 0))
+
+        total_correct_en = (
+                count.get("eu-en", 0) + count.get("ca-en", 0) + count.get("gl-en", 0) + count.get("es-en", 0)
+                + count.get("pt-en", 0) + count.get("en-en", 0))
+        en_per_class_recall = count.get("en-en", 0) / total_correct_en
+
+        en_f1 = (2 * en_per_class_precision * en_per_class_recall) / (en_per_class_precision + en_per_class_recall)
+    else:
+        en_per_class_precision = 0
+        en_per_class_recall = 0
+        en_f1 = 0
+
+    # calculation for pt
+    if count.get("pt-pt", 0) > 0:
+        pt_per_class_precision = count.get("pt-pt", 0) / (
+                count.get("pt-eu", 0) + count.get("pt-ca", 0) + count.get("pt-gl", 0) + count.get("pt-es", 0)
+                + count.get("pt-en", 0) + count.get("pt-pt", 0))
+
+        total_correct_pt = (
+                count.get("eu-pt", 0) + count.get("ca-pt", 0) + count.get("gl-pt", 0) + count.get("es-pt", 0)
+                + count.get("en-pt", 0) + count.get("pt-pt", 0))
+        pt_per_class_recall = count.get("pt-pt", 0) / total_correct_pt
+
+        pt_f1 = (2 * pt_per_class_precision * pt_per_class_recall) / (pt_per_class_precision + pt_per_class_recall)
+    else:
+        pt_per_class_precision = 0
+        pt_per_class_recall = 0
+        pt_f1 = 0
+
+    # macro f1 sum of f1s/#of language
+    macro_f1 = (eu_f1 + ca_f1 + gl_f1 + es_f1 + en_f1 + pt_f1) / 6
+
+    # weighted average f1 (correct_eu*eu_f1 + correct_ca*ca_f1+ correct_gl*gl_f1+ correct_es*es_f1 + ...)/len(results)
+    weighted_avg_f1 = (total_correct_eu * eu_f1 + total_correct_ca * ca_f1 + total_correct_gl * gl_f1
+                       + total_correct_es * es_f1 + total_correct_en * en_f1 + total_correct_pt * pt_f1) / len(results)
+
+    return accuracy, eu_per_class_precision, ca_per_class_precision, gl_per_class_precision, es_per_class_precision, \
+           en_per_class_precision, pt_per_class_precision, eu_per_class_recall, ca_per_class_recall, \
+           gl_per_class_recall, es_per_class_recall, en_per_class_recall, pt_per_class_recall, eu_f1, ca_f1, gl_f1, \
+           es_f1, en_f1, pt_f1, macro_f1, weighted_avg_f1
+
 
 
 # ------------------ Start code here ------------------
