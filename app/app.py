@@ -2,11 +2,19 @@ import re
 import math
 
 
-def start(vocabulary, size, smoothing, training_file, testing_file):
-    probability = generate_ngrams(size, vocabulary, training_file, smoothing)
-    generate_ngram_output(vocabulary, size, smoothing, probability, testing_file)
+# start function for part 1
+def start_existing_model(vocabulary, size, smoothing, training_file, testing_file):
+    probability = generate_ngrams(size, vocabulary, training_file, smoothing, False)
+    generate_ngram_output(vocabulary, size, smoothing, probability, testing_file, False)
 
 
+# start function for part 2
+def start_custom_model(training_file, testing_file):
+    probability = generate_ngrams(3, 2, training_file, 0.5, True)
+    generate_ngram_output(2, 3, 0.5, probability, testing_file, True)
+
+
+# function to count number of ngrams and store them in dictionary
 def get_count(size, vocabulary, message, count, total_count):
     if size == 1:
         if vocabulary == 0:
@@ -49,6 +57,7 @@ def get_count(size, vocabulary, message, count, total_count):
                 if re.match("([a-z][a-z][a-z])", lower_trigram):
                     count[lower_trigram] = count.get(lower_trigram, 0) + 1
                     total_count = total_count + 1
+
         elif vocabulary == 1:
             for trigram in message:
                 if re.match("([a-zA-Z][a-zA-Z][a-zA-Z])", trigram):
@@ -63,7 +72,26 @@ def get_count(size, vocabulary, message, count, total_count):
     return total_count
 
 
-def generate_ngrams(size, vocabulary, file_name, smoothing):
+# calculate probability for each ngram and store in dictionary
+def get_probability(count, total_count, smoothing, bins_size):
+    probability = dict()
+
+    for key in count:
+        probability[key] = (count[key] + smoothing) / (total_count + smoothing * bins_size)
+
+    probability["<NOT-APPEAR>"] = (0 + smoothing) / (total_count + smoothing * bins_size)
+
+    return probability
+
+
+# function to create ngrams
+def generate_ngrams(size, vocabulary, file_name, smoothing, model_used):
+    # regex used to filter for custom model
+    re1 = '[@#$%^&*()=+\[\]{}/:|<>~]'
+    re2 = 'xD|XD'
+
+    re_filter = re.compile("(%s|%s)" % (re1, re2))
+
     f = open(file_name, "r", encoding='utf-8')
     count_eu = dict()
     count_ca = dict()
@@ -72,13 +100,6 @@ def generate_ngrams(size, vocabulary, file_name, smoothing):
     count_en = dict()
     count_pt = dict()
 
-    if vocabulary == 0:
-        bins_size = 26 ** size
-    elif vocabulary == 1:
-        bins_size = 52 ** size
-    elif vocabulary == 2:
-        bins_size = 116766 ** size
-
     total_count_eu = 0
     total_count_ca = 0
     total_count_gl = 0
@@ -86,12 +107,22 @@ def generate_ngrams(size, vocabulary, file_name, smoothing):
     total_count_en = 0
     total_count_pt = 0
 
+    # read info line by line
     for x in f:
         info = x.split()
         id = info[0]
         name = info[1]
         language = info[2]
         message = " ".join(info[3:])
+        new_message_list = []
+        new_message = ""
+
+        # filter function for custom model
+        if model_used:
+            message = ""
+            for word in info[3:]:
+                if re_filter.search(word) == None:
+                    message = word if message == "" else message + " " + word
 
         if size == 2:
             message = [message[i:i + 2] for i in range(len(message) - 1)]
@@ -111,6 +142,25 @@ def generate_ngrams(size, vocabulary, file_name, smoothing):
         elif language == "pt":
             total_count_pt = get_count(size, vocabulary, message, count_pt, total_count_pt)
 
+    # calculate bin size
+    if model_used:
+        count_combine = {}
+        count_combine.update(count_eu)
+        count_combine.update(count_ca)
+        count_combine.update(count_gl)
+        count_combine.update(count_es)
+        count_combine.update(count_en)
+        count_combine.update(count_pt)
+        bins_size = len(count_combine)
+        print(bins_size)
+    else:
+        if vocabulary == 0:
+            bins_size = 26 ** size
+        elif vocabulary == 1:
+            bins_size = 52 ** size
+        elif vocabulary == 2:
+            bins_size = 116766 ** size
+
     probability_eu = get_probability(count_eu, total_count_eu, smoothing, bins_size)
     probability_ca = get_probability(count_ca, total_count_ca, smoothing, bins_size)
     probability_gl = get_probability(count_gl, total_count_gl, smoothing, bins_size)
@@ -124,21 +174,23 @@ def generate_ngrams(size, vocabulary, file_name, smoothing):
             "en": probability_en, "pt": probability_pt}
 
 
-def get_probability(count, total_count, smoothing, bins_size):
-    probability = dict()
-    for key in count:
-        probability[key] = (count[key] + smoothing) / (total_count + smoothing * bins_size)
+# function to generate output
+def generate_ngram_output(vocabulary, size, smoothing, probability, testing_file, model_used):
+    # regex function
+    re1 = '[@#$%^&*()=+\[\]{}/:|<>~]'
+    re2 = 'xD|XD'
 
-    probability["<NOT-APPEAR>"] = (0 + smoothing) / (total_count + smoothing * bins_size)
+    re_filter = re.compile("(%s|%s)" % (re1, re2))
 
-    return probability
-
-
-def generate_ngram_output(vocabulary, size, smoothing, probability, testing_file):
     input_file = open(testing_file, "r", encoding='utf-8')
 
-    trace_file_name = "trace_" + str(vocabulary) + "_" + str(size) + "_" + str(smoothing) + ".txt"
-    eval_file_name = "eval_" + str(vocabulary) + "_" + str(size) + "_" + str(smoothing) + ".txt"
+    # output file names
+    if model_used:
+        trace_file_name = "trace_myModel.txt"
+        eval_file_name = "eval_myModel.txt"
+    else:
+        trace_file_name = "trace_" + str(vocabulary) + "_" + str(size) + "_" + str(smoothing) + ".txt"
+        eval_file_name = "eval_" + str(vocabulary) + "_" + str(size) + "_" + str(smoothing) + ".txt"
 
     output_file = open(trace_file_name, "w", encoding='utf-8')
     output_file2 = open(eval_file_name, "w", encoding='utf-8')
@@ -146,12 +198,19 @@ def generate_ngram_output(vocabulary, size, smoothing, probability, testing_file
     count = dict()
     results = []
 
+    # read input from test file line by line
     for x in input_file:
         info = x.split()
         id = info[0]
         name = info[1]
         language = info[2]
         message = " ".join(info[3:])
+
+        if model_used:
+            message = ""
+            for word in info[3:]:
+                if re_filter.search(word) == None:
+                    message = word if message == "" else message + " " + word
 
         if size == 2:
             message = [message[i:i + 2] for i in range(len(message) - 1)]
@@ -195,6 +254,7 @@ def generate_ngram_output(vocabulary, size, smoothing, probability, testing_file
     output_file2.close()
 
 
+# get score for message
 def get_score(vocabulary, size, language, message, probability_table):
     score = 0
 
@@ -244,11 +304,14 @@ def get_score(vocabulary, size, language, message, probability_table):
 
     return score, language
 
+
+# calculate accuracy of model
 def generate_accuracy(correct_label, wrong_label):
     accuracy = correct_label / (correct_label + wrong_label)
     return accuracy
 
 
+# get evaluation results for a model
 def generate_evaluation(results, count):
     correct_label = 0
     wrong_label = 0
@@ -393,7 +456,13 @@ def generate_evaluation(results, count):
            es_f1, en_f1, pt_f1, macro_f1, weighted_avg_f1
 
 
-
 # ------------------ Start code here ------------------
 
-start(0, 3, 0.3, "training-tweets.txt", "test-tweets-given.txt")
+# start part 1
+start_existing_model(0, 1, 0, "training-tweets.txt", "test-tweets-given.txt")
+start_existing_model(1, 2, 0.5, "training-tweets.txt", "test-tweets-given.txt")
+start_existing_model(1, 3, 1, "training-tweets.txt", "test-tweets-given.txt")
+start_existing_model(2, 2, 0.3, "training-tweets.txt", "test-tweets-given.txt")
+
+# start part 2
+start_custom_model("training-tweets.txt", "test-tweets-given.txt")
