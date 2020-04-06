@@ -10,8 +10,8 @@ def start_existing_model(vocabulary, size, smoothing, training_file, testing_fil
 
 # start function for part 2
 def start_custom_model(training_file, testing_file):
-    probability = generate_ngrams(3, 2, training_file, 0.5, True)
-    generate_ngram_output(2, 3, 0.5, probability, testing_file, True)
+    probability = generate_ngrams(3, 2, training_file, 0.9, True)
+    generate_ngram_output(2, 3, 0.9, probability, testing_file, True)
 
 
 # function to count number of ngrams and store them in dictionary
@@ -110,12 +110,8 @@ def generate_ngrams(size, vocabulary, file_name, smoothing, model_used):
     # read info line by line
     for x in f:
         info = x.split()
-        id = info[0]
-        name = info[1]
         language = info[2]
         message = " ".join(info[3:])
-        new_message_list = []
-        new_message = ""
 
         # filter function for custom model
         if model_used:
@@ -201,7 +197,6 @@ def generate_ngram_output(vocabulary, size, smoothing, probability, testing_file
     for x in input_file:
         info = x.split()
         id = info[0]
-        name = info[1]
         language = info[2]
         message = " ".join(info[3:])
 
@@ -449,10 +444,12 @@ def generate_evaluation(results, count):
     weighted_avg_f1 = (total_correct_eu * eu_f1 + total_correct_ca * ca_f1 + total_correct_gl * gl_f1
                        + total_correct_es * es_f1 + total_correct_en * en_f1 + total_correct_pt * pt_f1) / len(results)
 
-    return accuracy, eu_per_class_precision, ca_per_class_precision, gl_per_class_precision, es_per_class_precision, \
-           en_per_class_precision, pt_per_class_precision, eu_per_class_recall, ca_per_class_recall, \
-           gl_per_class_recall, es_per_class_recall, en_per_class_recall, pt_per_class_recall, eu_f1, ca_f1, gl_f1, \
-           es_f1, en_f1, pt_f1, macro_f1, weighted_avg_f1
+    return round(accuracy, 4), round(eu_per_class_precision, 4), round(ca_per_class_precision, 4), \
+           round(gl_per_class_precision, 4), round(es_per_class_precision, 4), round(en_per_class_precision, 4), \
+           round(pt_per_class_precision, 4), round(eu_per_class_recall, 4), round(ca_per_class_recall, 4), \
+           round(gl_per_class_recall, 4), round(es_per_class_recall, 4), round(en_per_class_recall, 4), \
+           round(pt_per_class_recall, 4), round(eu_f1, 4), round(ca_f1, 4), round(gl_f1, 4), round(es_f1, 4), \
+           round(en_f1, 4), round(pt_f1, 4), round(macro_f1, 4), round(weighted_avg_f1, 4)
 
 
 # ------------------ Start code here ------------------
